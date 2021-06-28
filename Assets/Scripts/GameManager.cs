@@ -1,12 +1,18 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 public class GameManager : MonoBehaviour
 {
     public static GameManager instance;
 
     public int level;
+    private int highestLevel;
+    private int winStreak;
+    public int winStreakRequiredToIncrease;
+    private int loseStreak;
+    public int loseStreakRequiredToDecrease;
     public bool hidingAll;
     public bool autoDisappear;
     public float timeToDisappear;
@@ -17,6 +23,9 @@ public class GameManager : MonoBehaviour
 
     private int lastNumberPressed;
 
+    [Header("UI")]
+    public TMP_Text hideDelayText;
+    public TMP_Text highestLevelText;
 
     private void Awake()
     {
@@ -31,12 +40,14 @@ public class GameManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        InitializeLevel(4);
+        highestLevel = 0;
+        InitializeLevel(2);
     }
 
     private void InitializeLevel(int lvl)
     {
         level = lvl;
+        
         for (int i = 0; i < level; i++)
         {
             if (i >= numbers.Count)
@@ -89,15 +100,48 @@ public class GameManager : MonoBehaviour
 
         if (lastNumberPressed + 1 != number)
         {
-            Debug.LogError("YOU LOSE");
+            OnLose();
+            return;
         }
 
         lastNumberPressed = number;
 
         if (lastNumberPressed == level)
         {
-            Debug.Log("YOU WIN");
+            OnWin();
         }
+    }
+
+    public void OnWin()
+    {
+        winStreak++;
+        loseStreak = 0;
+        if (winStreak >= winStreakRequiredToIncrease)
+        {
+            if (level > highestLevel)
+                highestLevel = level;
+            highestLevelText.SetText("Highest Level\n{0}", highestLevel);
+            level++;
+            winStreak = 0;
+            InitializeLevel(level);
+            return;
+        }
+        InitializeLevel(level);
+    }
+
+    public void OnLose()
+    {
+        loseStreak++;
+        winStreak = 0;
+        if (loseStreak >= loseStreakRequiredToDecrease)
+        {
+            level--;
+            level = level < 2 ? 2 : level;
+            loseStreak = 0;
+            InitializeLevel(level);
+            return;
+        }
+        InitializeLevel(level);
     }
 
     public void HideAll()
@@ -107,11 +151,23 @@ public class GameManager : MonoBehaviour
             number.ChangeBackground(false);
         }
         hidingAll = true;
+        StopAllCoroutines();
     }
 
     IEnumerator WaitToHideAll()
     {
         yield return new WaitForSeconds(timeToDisappear);
         HideAll();
+    }
+
+    public void ToggleAutoHide(bool toggle)
+    {
+        autoDisappear = toggle;
+    }
+
+    public void ChangeHideDelay(float value)
+    {
+        timeToDisappear = value;
+        hideDelayText.SetText("Time Visable:\n{0}", value);
     }
 }
